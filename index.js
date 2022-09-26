@@ -1,17 +1,15 @@
 // ==UserScript==
-// @name        提取bilibili视频下载地址 - 12circle
-// @namespace   Violentmonkey Scripts
+// @name        提取bilibili视频下载地址 - 12redcircle
+// @namespace   cyou.12redcircle.bilibili-video-download-extractor
 // @match       https://www.bilibili.com/video/*
 // @grant       none
-// @version     1.0.1-beta.0
-// @author      acev
+// @version     20220927.1
+// @author      12redcircle
 // @description 给bilibili视频添加直链下载功能。
 // @license     MIT
+// @require     https://cdn.jsdelivr.net/npm/sweetalert2@11.4.33/dist/sweetalert2.all.min.js
 //
-// @require     https://unpkg.com/popper.js@1
-// @require     https://unpkg.com/tippy.js@5
 // ==/UserScript==
-
 /**
  * 获取bvid
  * @returns
@@ -60,11 +58,9 @@ async function getAvidByBvid(bvid) {
  * @returns
  */
 async function getDownloadURL(avid, cid) {
-  console.log(600)
   const res = await fetch(
     `https://api.bilibili.com/x/player/playurl?avid=${avid}&cid=${cid}&qn=112`
   ).then((res) => res.json());
-    console.log(res)
   const url = res?.data?.durl?.[0]?.url;
   return url;
 }
@@ -94,80 +90,105 @@ function appendDOM(anchor) {
               <span>下载高清视频</span>
               <span data-status></span>
               </button>
-              <div id="${tooltipId}" class="xamxat"></div>
+              <div id="${tooltipId}"></div>
              `;
     return html;
   }
 
   function createTipHTML(data = {}) {
     const { urls = [] } = data;
-    const tipHtml = `6666
+    const tipHtml = `
     <fieldset>
-                <legend>点击以下链接下载高清视频</legend>
-                <ul class="acev_bilivideo_down_tooltip">${urls
-                  .map(
-                    ({ name, url }) =>
-                      `<li><a href="${url}" target="_blank">${name}</a></li>`
-                  )
-                  .join("\n")}
-                          </ul>
-                  </div>
-              </fieldset>`;
+      <legend>点击以下链接下载高清视频</legend>
+      <table class="acev_bilivideo_down_tooltip">
+          <tr>
+              <th>序号</th>
+              <th>下载链接</th>
+          </tr>
+          ${urls.map(({ name, url }, $index) =>
+          `
+          <tr>
+              <td class="index">${$index}</td>
+              <td>
+                  <a href="${url}" target="_blank">${name}</a>
+              </td>
+          </tr>
+          `
+          )
+          .join("\n")}
+      </table>
+    </div>
+  </fieldset>
+    `
     return tipHtml;
   }
 
   function createCss() {
     const css = `
-    .acev_bilivideo_down_download_btn{
-      display: flex;
-      color: var(--text_white);
-      background: var(--operate_orange);
-      border: none;
-      padding: .2em 1em;
-      border-radius: 2px;
-      margin: 0 1em;
-    }
+        .acev_bilivideo_down_download_btn {
+            display: flex;
+            border: none;
+            padding: .2em 1em;
+            border-radius: 2px;
+            margin: 0 1em;
+            background: #dcdcdc;
+            color: #333;
+            white-space: nowrap;
+            cursor: pointer;
+        }
 
-    .acev_bilivideo_down_download_btn .icon{
-        fill: currentColor;
-        width: 1.6em;
-        height: 1.6em;
-        margin-right: 4px;
-    }
+        .acev_bilivideo_down_download_btn:hover {
+            background-color: pink;
+        }
 
-    .acev_bilivideo_down_download_btn:hover{
-        cursor: pointer;
-        box-shadow: 0 1px 1px var(--text3);
-        margin-top: -1px;
-    }
+        .acev_bilivideo_down_download_btn .icon {
+            fill: currentColor;
+            width: 1.6em;
+            height: 1.6em;
+            margin-right: 4px;
+        }
 
-    .acev_bilivideo_down_tooltip{
-      padding: .6em;
-    }
+        .acev_bilivideo_down_tooltip {
+            font-size: 1rem;
+            text-align: left;
+            margin-top: 6px;
+        }
 
-    .acev_bilivideo_down_tooltip a {
-      color: var(--text_white);
-      font-size: small;
-      line-height: 2;
-    }
+        .acev_bilivideo_down_tooltip .index {
+            min-width: 4rem;
+        }
 
-    .acev_bilivideo_down_tooltip a:hover{
-        text-decoration: underline;
-    }
+        .acev_bilivideo_down_tooltip td,
+        .acev_bilivideo_down_tooltip th {
+            border: #333 2px solid;
+            padding: 6px;
+        }
+
+        .acev_bilivideo_down_tooltip a:hover {
+            border-bottom: 2px currentColor solid;
+            color: blue;
+        }
   `;
+
     const style = document.createElement("style");
     style.insertAdjacentHTML(`beforeend`, css);
     return style;
   }
 
-  async function toggleTip() {
-    updateLoadingStatus("正在获取资源");
-    const metadata = await getMetadatas();
-    const tip = document.querySelector('.xamxat')
-    const tipHtml = createTipHTML({ urls: metadata.urls });
-    tip.innerHTML = tipHtml;
 
-    updateLoadingStatus();
+  async function toggleTip(tip) {
+      updateLoadingStatus("正在获取资源");
+      const metadata = await getMetadatas();
+      const tipHtml = createTipHTML({ urls: metadata.urls });
+
+      Swal.fire({
+        html: tipHtml,
+        showCancelButton: false,
+        confirmButtonColor: '#3085d6',
+        confirmButtonText: 'OK'
+      })
+
+      updateLoadingStatus();
   }
 
   function bindTip() {
@@ -190,7 +211,6 @@ async function getMetadatas() {
   const avid = await getAvidByBvid(bvid);
 
   const title = getTitle();
-  debugger
   const urls = await Promise.all(
     pages.map(({ name, cid }) =>
       getDownloadURL(avid, cid).then((url) => ({
@@ -199,7 +219,6 @@ async function getMetadatas() {
       }))
     )
   );
-
   return {
     title,
     urls,
@@ -216,6 +235,7 @@ async function getMetadatas() {
     appendDOM(anchor);
   }, DELAY);
 })();
+
 
 /**
  * 打开文件句柄
@@ -236,6 +256,7 @@ async function getNewFileHandle() {
   const handle = await window.showSaveFilePicker(options);
   return handle;
 }
+
 
 /**
  * 将接口返回的文件流写入文件
@@ -265,9 +286,3 @@ async function writeURLToFile(fileHandle, url) {
     }
   }
 }
-
-// const button = document.querySelector(`h1.video-title`);
-// button.onclick = async function(){
-
-// const handle = await getNewFileHandle()
-// await writeURLToFile(handle, url);
