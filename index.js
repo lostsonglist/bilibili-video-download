@@ -3,7 +3,7 @@
 // @namespace   cyou.12redcircle.bilibili-video-download-extractor
 // @match       https://www.bilibili.com/video/*
 // @grant       none
-// @version     20220927.1
+// @version     20221015.1
 // @author      12redcircle
 // @description 给bilibili视频添加直链下载功能。
 // @license     MIT
