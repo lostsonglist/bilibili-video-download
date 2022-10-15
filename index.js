@@ -108,7 +108,7 @@ function appendDOM(anchor) {
           ${urls.map(({ name, url }, $index) =>
           `
           <tr>
-              <td class="index">${$index}</td>
+              <td class="index">${$index + 1}</td>
               <td>
                   <a href="${url}" target="_blank">${name}</a>
               </td>
